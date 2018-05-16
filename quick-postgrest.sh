@@ -29,13 +29,13 @@ API_BIND="$API_PORT":3000
 POSTGRES_SU="postgres"
 POSTGRES_SU_PASSWORD="mysecretpassword"
 
-echo pulling and running postgres
+echo "pulling and running postgres"
 docker pull postgres
 docker run --name "$DB_HOST" \
        -e POSTGRES_PASSWORD="$POSTGRES_SU_PASSWORD" \
        -d "$DB_NAME"
 
-echo waiting for database to accept connections
+echo "waiting for database to accept connections"
 until
     docker exec "$DB_HOST" \
 	   psql -o /dev/null -t -q -U "$POSTGRES_SU" -c 'select pg_sleep(1)' -d "$DB_NAME" \
@@ -43,7 +43,7 @@ until
 do sleep 1;
 done
 
-echo database is ready to connect, creating model
+echo "database is ready to connect, creating model"
 docker exec -i "$DB_HOST" psql -U "$POSTGRES_SU" -d "$DB_NAME" <<EOF
 create schema api;
 
@@ -68,7 +68,7 @@ grant select, insert, update, delete on api.todos to $DB_ANON;
 grant usage, select on all sequences in schema api to $DB_ANON;
 EOF
 
-echo pulling and running postgrest api server
+echo "pulling and running postgrest api server"
 docker pull subzerocloud/postgrest
 docker run --name "$API_HOST" --link "$DB_HOST" -p "$API_BIND" \
        -e PGRST_DB_URI=postgres://"$DB_USER":"$DB_PASS"@"$DB_HOST"/"$DB_NAME" \
@@ -78,18 +78,20 @@ docker run --name "$API_HOST" --link "$DB_HOST" -p "$API_BIND" \
 
 sleep 1
 
-echo GET to SELECT from todos
-curl -s localhost:"$API_PORT"/todos | jq .
+HOST="localhost:$API_PORT"
 
-echo POST to INSERT a todo
+echo "GET to SELECT from todos"
+curl -s "$HOST"/todos | jq .
+
+echo "POST to INSERT a todo"
 curl -s -H "Content-Type: application/json" \
      -d '{"task":"weed the garden"}' \
-     localhost:"$API_PORT"/todos
+     "$HOST"/todos
 
-echo PATCH to UPDATE a todo
+echo "PATCH to UPDATE a todo"
 curl -X PATCH  -s -H "Content-Type: application/json" \
      -d '{"due": "2018-06-01"}' \
-     'localhost:"$API_PORT"/todos?id=eq.1'
+     "$HOST"/todos?id=eq.1
 
-echo showing final changes
-curl -s localhost:"$API_PORT"/todos | jq .
+echo "showing final changes"
+curl -s "$HOST"/todos | jq .
