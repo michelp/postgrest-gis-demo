@@ -1,0 +1,40 @@
+version: '2'
+services:
+  
+  postgrest:
+    image: subzerocloud/postgrest
+    ports:
+      - "3000:3000"
+    links:
+      - db:db
+    environment:
+      - PGRST_DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - PGRST_DB_SCHEMA=${DB_SCHEMA}
+      - PGRST_DB_ANON_ROLE=${DB_ANON_ROLE}
+      - PGRST_DB_POOL=${DB_POOL}
+      - PGRST_JWT_SECRET=${JWT_SECRET}
+      - PGRST_MAX_ROWS=${MAX_ROWS}
+      - PGRST_PRE_REQUEST=${PRE_REQUEST}
+  
+  db:
+    build: db
+    ports:
+      - "55432:5432"
+    environment:
+      # env vars specific to postgres image used on first boot
+      - POSTGRES_USER=${SUPER_USER}
+      - POSTGRES_PASSWORD=${SUPER_USER_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      # env vars useful for our sql scripts
+      - SUPER_USER=${SUPER_USER}
+      - SUPER_USER_PASSWORD=${SUPER_USER_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DEVELOPMENT=${DEVELOPMENT}
+      - JWT_SECRET=${JWT_SECRET}
+
+    volumes:
+      - "./db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d"
+
+  
